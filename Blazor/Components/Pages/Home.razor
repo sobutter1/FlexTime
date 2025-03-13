@@ -1,0 +1,95 @@
+﻿@page "/"
+@using Blazor.Models
+@inject WorkContext Db
+@rendermode InteractiveServer
+
+<PageTitle>Home</PageTitle>
+
+@page "/workhours"
+
+<h3>Work Hours Calculator</h3>
+<div class="d-flex justify-content-evenly">
+    <div class="form-group w-25">
+        <label>Start Time:</label>
+        <input type="time" @bind="WorkDay.FromTime" class="form-control"/>
+    </div>
+
+    <div class="form-group w-25">
+        <label>End Time:</label>
+        <input type="time" @bind="WorkDay.ToTime" class="form-control"/>
+    </div>
+
+    <div class="form-group w-25">
+        <label>Brake Time:</label>
+        <input type="time" @bind="WorkDay.BrakeTime" class="form-control"/>
+    </div>
+</div>
+
+<button type="button" class="btn btn-primary" @onclick="Add"><span class="bi bi-plus"></span></button>
+<button type="button" class="btn btn-primary" @onclick="UpdateTotalBalance">Update</button>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th scope="col">From</th>
+        <th scope="col">To</th>
+        <th scope="col">Brake</th>
+        <th scope="col">Balance</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var workDay in Db.WorkDays)
+    {
+        <tr>
+            <td>@workDay.FromTime.ToString("HH:mm")</td>
+            <td>@workDay.ToTime.ToString("HH:mm")</td>
+            <td>@workDay.BrakeTime.ToString("HH:mm")</td>
+            <td>@CalcBalance(workDay)</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<br/>
+<p>
+    <b>@TotalBalance</b>
+</p>
+
+@code {
+    private WorkDays WorkDay { get; set; } = new();
+    private string TotalBalance { get; set; } = "00:00"; // Default to 00:00
+
+    private void Add()
+    {
+        var workedTime = WorkDay.ToTime - WorkDay.FromTime;
+
+        var time = new TimeSpan(7, 42, 0);
+
+        WorkDay.Balance = workedTime - WorkDay.BrakeTime.TimeOfDay - time;
+        Db.WorkDays.Add(WorkDay);
+        Db.SaveChanges();
+        UpdateTotalBalance();
+        WorkDay = new WorkDays();
+    }
+
+    private static string CalcBalance(WorkDays workDay)
+    {
+        return workDay.Balance < TimeSpan.Zero ? $"-{workDay.Balance.ToString(@"hh\:mm").TrimStart('-')}" : "+" + workDay.Balance.ToString(@"hh\:mm");
+    }
+
+    private void UpdateTotalBalance()
+    {
+        var totalDuration = Db.WorkDays
+            .Select(e => e.Balance) // Select the TimeSpan column
+            .AsEnumerable() // Switch to in-memory processing
+            .Aggregate(TimeSpan.Zero, (sum, next) => sum + next); // Sum all timespans
+
+        // Sum all the balances from the database
+        var totalBalance = totalDuration;
+
+        // Convert total minutes to TimeSpan and display it as HH:mm
+        // var totalTime = TimeSpan.FromMinutes(totalBalance);
+        TotalBalance = totalBalance < TimeSpan.Zero ? $"-{totalBalance.ToString(@"hh\:mm").TrimStart('-')}" : "+" + totalBalance.ToString(@"hh\:mm");
+    }
+
+}
