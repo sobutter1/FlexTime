@@ -38,7 +38,7 @@
     </tr>
     </thead>
     <tbody>
-    @foreach (var workDay in Db.WorkDays)
+    @foreach (var workDay in Db.WorkDays.Skip(10* (currentPage-1)).Take(10))
     {
         <tr>
             <td>@workDay.FromTime.ToString("HH:mm")</td>
@@ -50,6 +50,30 @@
     </tbody>
 </table>
 
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item">
+            <a class="page-link" href="#" @onclick="() => --currentPage" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        
+        @{
+            var pages = (int)Math.Ceiling((double)Db.WorkDays.Count() / 10);
+            
+            for (var i = 1; i <= pages; i++)
+            {
+                <li class="page-item"><a class="page-link" href="#">@i</a></li>
+            }
+        }
+        <li class="page-item">
+            <a class="page-link" href="#" @onclick="() => ++currentPage" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+
 <br/>
 <p>
     <b>@TotalBalance</b>
@@ -58,6 +82,7 @@
 @code {
     private WorkDays WorkDay { get; set; } = new();
     private string TotalBalance { get; set; } = "00:00"; // Default to 00:00
+    private int currentPage { get; set; } = 1;
 
     private void Add()
     {
